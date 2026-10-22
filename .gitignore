@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+eval/results/
+eval/dataset/photos/*
+!eval/dataset/photos/.gitkeep
+eval/dataset/answers.csv
+.pytest_cache/
