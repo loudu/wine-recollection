@@ -3,8 +3,17 @@
 Identifier une bouteille de vin à partir de photos d'une étiquette abîmée
 (humidité, déchirure, moisissure, décoloration).
 
-Cette première version est un **prototype en ligne de commande** centré sur
-l'identification. L'application mobile viendra se brancher dessus ensuite.
+Deux façons de l'utiliser :
+
+- **Sans programmer et sans coût supplémentaire** : la page
+  [`app/wine-recollection.html`](app/wine-recollection.html), publiée sur claude.ai.
+  Elle s'ouvre sur téléphone, prend les photos et utilise votre compte Claude
+  (abonnement existant, aucune clé API). Elle n'a pas de recherche web : les
+  boutons « Comparer les étiquettes » et « Rechercher » vous laissent vérifier
+  chaque candidat.
+- **Pour développeurs** : le prototype Python ci-dessous, avec vérification
+  automatique par recherche web et mesure de fiabilité. Il passe par l'API
+  Anthropic, facturée à l'usage.
 
 ## Comment ça marche
 

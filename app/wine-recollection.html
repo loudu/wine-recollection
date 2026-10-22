@@ -1,0 +1,493 @@
+<title>Wine Recollection</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500;6..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column like a cellar notebook; the label transcription in mono is the hero of each result. */
+:root {
+  --bg: #f7f5f3;
+  --surface: #ffffff;
+  --ink: #241a1d;
+  --muted: #6f6266;
+  --line: #e4dcdd;
+  --claret: #7a1f38;
+  --claret-soft: #f3e4e8;
+  --glass: #2e4a3c;
+  --glass-soft: #e3ece6;
+  --stain: #a7864f;
+  --warn: #9a5b00;
+  --font-display: "Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #171214; --surface: #211a1d; --ink: #f1e9eb; --muted: #b3a3a8; --line: #3a2e32;
+    --claret: #e07f99; --claret-soft: #3b1f28; --glass: #8fc1a5; --glass-soft: #1f3128;
+    --stain: #d2b07a; --warn: #f0b35a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #171214; --surface: #211a1d; --ink: #f1e9eb; --muted: #b3a3a8; --line: #3a2e32;
+  --claret: #e07f99; --claret-soft: #3b1f28; --glass: #8fc1a5; --glass-soft: #1f3128;
+  --stain: #d2b07a; --warn: #f0b35a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 16px/1.55 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+main { max-width: 640px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; font-weight: 700; }
+h1 { font-size: 2.1rem; line-height: 1.1; letter-spacing: .01em; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.15rem; font-weight: 500; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 60ch; margin-top: 6px; }
+.eyebrow { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+header { display: grid; gap: 4px; border-bottom: 3px double var(--line); padding-bottom: 18px; }
+
+section.step { display: grid; gap: 12px; }
+.step-head { display: flex; align-items: baseline; gap: 10px; }
+.step-num { font-family: var(--font-display); color: var(--claret); font-size: 1.35rem; }
+
+.row { display: flex; flex-wrap: wrap; gap: 10px; }
+button, .btn {
+  font: 600 .95rem/1 var(--font-body); border-radius: var(--radius);
+  padding: 12px 16px; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+}
+button:hover, .btn:hover { border-color: var(--claret); }
+button:focus-visible, .btn:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--claret); outline-offset: 2px; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.primary { background: var(--claret); border-color: var(--claret); color: var(--bg); font-size: 1.05rem; padding: 15px 22px; }
+.primary:hover { filter: brightness(1.08); }
+.small { padding: 8px 12px; font-size: .85rem; }
+input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.thumb { position: relative; aspect-ratio: 3 / 4; max-width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb button { position: absolute; top: 4px; right: 4px; padding: 4px 8px; font-size: .8rem; border-radius: 6px; }
+.hint { font-size: .88rem; color: var(--muted); }
+.hint b { color: var(--ink); font-weight: 600; }
+
+textarea {
+  width: 100%; min-height: 84px; resize: vertical; font: inherit; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px;
+}
+
+.status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border-radius: var(--radius); background: var(--claret-soft); }
+.status.error { background: var(--surface); border: 1px solid var(--warn); color: var(--ink); }
+.dots { display: inline-flex; gap: 4px; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--claret); animation: pulse 1.2s infinite ease-in-out; }
+.dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
+@keyframes pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .dots i { animation: none; opacity: .7; } }
+
+.result { display: grid; gap: 20px; }
+.example-tag { display: inline-block; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; color: var(--warn); border: 1px solid var(--warn); border-radius: 999px; padding: 2px 10px; }
+
+.clues { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: grid; gap: 12px; }
+.fragments { display: flex; flex-wrap: wrap; gap: 8px; }
+.frag { font-family: var(--font-mono); font-size: .92rem; padding: 4px 9px; border-radius: 6px; background: var(--bg); border: 1px dashed var(--line); }
+.frag .q { color: var(--claret); font-weight: 500; }
+.frag[data-l="clair"] { border-style: solid; }
+.frag small { font-family: var(--font-body); color: var(--muted); font-size: .72rem; margin-left: 6px; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: .92rem; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; min-width: 0; }
+
+.cands { display: grid; gap: 12px; }
+.cand { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px; display: grid; gap: 10px; }
+.cand.top { border-color: var(--claret); }
+.cand.confirmed { border-color: var(--glass); background: var(--glass-soft); }
+.cand-head { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+.cand-head > div { min-width: 0; }
+.rank { font-family: var(--font-display); color: var(--muted); font-size: .95rem; }
+.where { color: var(--muted); font-size: .9rem; }
+.pct { font: 600 1.25rem/1 var(--font-body); font-variant-numeric: tabular-nums; color: var(--claret); white-space: nowrap; }
+.bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.bar span { display: block; height: 100%; background: var(--claret); }
+.ev { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; font-size: .92rem; }
+.ev li { padding-left: 22px; position: relative; }
+.ev li::before { position: absolute; left: 0; font-weight: 700; }
+.ev .pro::before { content: "+"; color: var(--glass); }
+.ev .con::before { content: "−"; color: var(--warn); }
+
+.followup { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 16px; }
+.followup ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.summary { font-style: italic; color: var(--muted); max-width: 62ch; }
+
+details.history { border-top: 3px double var(--line); padding-top: 16px; }
+details.history summary { cursor: pointer; font-family: var(--font-display); font-size: 1.15rem; }
+.hist-list { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; }
+.hist-list li { display: flex; justify-content: space-between; gap: 12px; font-size: .92rem; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.hist-list li span:last-child { color: var(--muted); white-space: nowrap; }
+.ok { color: var(--glass); font-weight: 600; }
+.unavailable { border: 1px solid var(--warn); border-radius: var(--radius); padding: 14px 16px; background: var(--surface); }
+</style>
+
+<main>
+  <header>
+    <span class="eyebrow">Enquête sur une étiquette abîmée</span>
+    <h1>Wine Recollection</h1>
+    <p class="lede">Photographiez la bouteille. Claude relève ce qui reste lisible, puis propose les vins possibles avec un degré de confiance.</p>
+  </header>
+
+  <div id="unavailable" class="unavailable" hidden></div>
+
+  <section class="step" aria-labelledby="s1">
+    <div class="step-head"><span class="step-num">1</span><h2 id="s1">Les photos</h2></div>
+    <div class="row">
+      <button type="button" id="btn-camera">Prendre une photo</button>
+      <button type="button" id="btn-gallery">Choisir dans la galerie</button>
+      <input type="file" id="in-camera" accept="image/*" capture="environment">
+      <input type="file" id="in-gallery" accept="image/*" multiple>
+    </div>
+    <div class="thumbs" id="thumbs"></div>
+    <p class="hint" id="photo-hint">Plus il y a d'angles, mieux c'est : <b>l'étiquette de face</b>, la contre-étiquette, <b>le bouchon</b> et <b>la capsule</b>, souvent marqués du domaine ou du millésime. Une lampe tenue sur le côté fait ressortir les encres pâlies.</p>
+  </section>
+
+  <section class="step" aria-labelledby="s2">
+    <div class="step-head"><span class="step-num">2</span><h2 id="s2">Ce que vous savez déjà</h2></div>
+    <textarea id="notes" placeholder="Facultatif. Ex : trouvée dans la cave de mon grand-père près de Bordeaux, achetée dans les années 80, vin rouge…"></textarea>
+  </section>
+
+  <div class="row">
+    <button type="button" class="primary" id="btn-run" disabled>Identifier la bouteille</button>
+    <button type="button" id="btn-stop" hidden>Arrêter</button>
+  </div>
+
+  <div id="status" class="status" hidden role="status" aria-live="polite"></div>
+
+  <section id="result" class="result" aria-live="polite"></section>
+
+  <details class="history" id="history" hidden>
+    <summary>Mes bouteilles identifiées</summary>
+    <ul class="hist-list" id="hist-list"></ul>
+  </details>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const HISTORY_KEY = "wine-recollection-history";
+  const MAX_PHOTOS_FALLBACK = 5;
+
+  const state = { photos: [], sample: null, maxPhotos: MAX_PHOTOS_FALLBACK, ctl: null, last: null };
+
+  // ---------- small DOM helper (text only, never innerHTML for model output) ----------
+  function el(tag, attrs = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === "class") node.className = v;
+      else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+      else node.setAttribute(k, v === true ? "" : v);
+    }
+    for (const c of children.flat()) if (c != null && c !== false) node.append(c instanceof Node ? c : String(c));
+    return node;
+  }
+  const str = (v) => (typeof v === "string" ? v.trim() : v == null ? "" : String(v));
+  const list = (v) => (Array.isArray(v) ? v.map(str).filter(Boolean) : []);
+
+  // ---------- photos ----------
+  $("btn-camera").onclick = () => $("in-camera").click();
+  $("btn-gallery").onclick = () => $("in-gallery").click();
+  for (const id of ["in-camera", "in-gallery"]) {
+    $(id).addEventListener("change", (e) => {
+      for (const f of e.target.files) {
+        if (state.photos.length >= state.maxPhotos) break;
+        state.photos.push({ file: f, url: URL.createObjectURL(f) });
+      }
+      e.target.value = "";
+      renderThumbs();
+    });
+  }
+  function renderThumbs() {
+    $("thumbs").replaceChildren(...state.photos.map((p, i) =>
+      el("div", { class: "thumb" },
+        el("img", { src: p.url, alt: `Photo ${i + 1}` }),
+        el("button", { type: "button", "aria-label": `Retirer la photo ${i + 1}`, onclick: () => {
+          URL.revokeObjectURL(p.url); state.photos.splice(i, 1); renderThumbs();
+        } }, "×"))));
+    const full = state.photos.length >= state.maxPhotos;
+    $("btn-camera").disabled = $("btn-gallery").disabled = full;
+    updateRunButton();
+  }
+  function updateRunButton() {
+    $("btn-run").disabled = !state.sample || !state.photos.length || !!state.ctl;
+  }
+
+  // ---------- prompts ----------
+  function observePrompt(n, notes) {
+    return `Tu es expert en étiquettes de vin et en paléographie. Voici ${n} photo(s) d'une même bouteille dont l'étiquette est abîmée (humidité, déchirure, moisissure, décoloration).
+
+À cette étape tu dois seulement OBSERVER, pas identifier le vin :
+- Recopie chaque fragment de texte exactement comme il apparaît. Remplace chaque lettre illisible par « ? ». Ne complète jamais un mot d'après ce que tu crois être le vin.
+- Pour chaque fragment, indique s'il est « clair », « partiel » ou « deviné », et où il se trouve.
+- Décris les éléments visuels (blason, illustration, typographie, couleurs, bordures, médailles) assez précisément pour les comparer à une autre étiquette.
+- Note la forme et la couleur de la bouteille, la capsule et le bouchon s'ils sont visibles.
+- Si une information n'est pas visible, mets null ou une liste vide.
+${notes ? `\nCe que l'utilisateur sait déjà : ${notes}\n` : ""}
+Réponds uniquement avec un objet JSON de cette forme :
+{"text_fragments":[{"text":"…ILLAC","legibility":"partiel","location":"bas de l'étiquette"}],"vintage":{"reading":"19?5","candidates":["1995","1985"]},"visual_elements":["blason avec un lion"],"bottle":{"shape":"bordelaise","glass_color":"vert foncé","capsule":null,"cork":null},"legal_mentions":["Mis en bouteille au château"],"likely_country":"France","likely_region":"Bordeaux","damage_description":"…","photo_advice":["Photographier le bouchon"]}`;
+  }
+
+  function identifyPrompt(n, clues, notes) {
+    return `Tu es un sommelier enquêteur. Voici ${n} photo(s) d'une bouteille à l'étiquette abîmée, et les indices relevés lors d'une première observation :
+
+${JSON.stringify(clues, null, 1)}
+${notes ? `\nCe que l'utilisateur sait déjà : ${notes}\n` : ""}
+Méthode :
+1. Raisonne à partir des indices : fragments de texte, appellation probable, forme de bouteille, éléments visuels, mentions légales (par exemple, la mention des sulfites n'est obligatoire dans l'UE que depuis fin 2005, ce qui borne le millésime).
+2. Tu n'as pas accès au web : appuie-toi sur tes connaissances, ne cite que des vins dont tu es raisonnablement sûr qu'ils existent, et n'invente pas de détails d'étiquette.
+3. Classe 1 à 5 candidats. Les scores de confiance (0 à 100) doivent être honnêtes et leur somme ne doit pas dépasser 100 ; si les indices sont maigres, aucun candidat ne dépasse 50.
+4. Pour chaque candidat, liste les indices qui concordent et ceux qui le contredisent, sans les cacher.
+5. Pour chaque candidat, donne une courte requête de recherche web qui permettrait à l'utilisateur de vérifier en comparant l'étiquette.
+6. Propose les questions ou photos supplémentaires qui départageraient le mieux les candidats.
+
+Réponds uniquement avec un objet JSON de cette forme :
+{"candidates":[{"producer":"Château Lynch-Bages","wine_name":null,"appellation":"Pauillac","region":"Bordeaux","country":"France","vintage":"1995","color":"rouge","confidence":55,"supporting_evidence":["fragment …ILLAC compatible avec Pauillac"],"contradicting_evidence":["blason non visible"],"search_query":"Château Lynch-Bages 1995 étiquette"}],"follow_up_questions":["Le bouchon porte-t-il une inscription ?"],"summary":"Explication courte du raisonnement."}`;
+  }
+
+  // ---------- run ----------
+  $("btn-run").onclick = () => run($("notes").value.trim());
+  $("btn-stop").onclick = () => state.ctl?.abort();
+
+  async function run(notes) {
+    const sample = state.sample;
+    if (!sample || !state.photos.length) return;
+    const ctl = new AbortController();
+    state.ctl = ctl;
+    $("btn-stop").hidden = false;
+    updateRunButton();
+    const images = state.photos.map((p) => p.file);
+    const n = images.length;
+    try {
+      showStatus("Étape 1 sur 2 · Lecture de ce qui reste sur l'étiquette");
+      const clues = await sample.json(observePrompt(n, notes), { images, modelTier: "complex", signal: ctl.signal });
+      showStatus("Étape 2 sur 2 · Enquête sur les vins possibles");
+      const ident = await sample.json(identifyPrompt(n, clues, notes), { images, modelTier: "complex", signal: ctl.signal });
+      hideStatus();
+      state.last = { clues, ident, notes, at: Date.now() };
+      renderResult(state.last, false);
+      saveHistory(state.last, null);
+    } catch (e) {
+      if (e?.code === "cancelled") hideStatus();
+      else showError(e);
+    } finally {
+      state.ctl = null;
+      $("btn-stop").hidden = true;
+      updateRunButton();
+    }
+  }
+
+  function showStatus(text) {
+    const s = $("status");
+    s.className = "status";
+    s.replaceChildren(el("span", { class: "dots", "aria-hidden": "true" }, el("i"), el("i"), el("i")),
+      el("span", {}, text, el("br"), el("small", { class: "hint" }, "Cela prend en général entre 30 secondes et 2 minutes.")));
+    s.hidden = false;
+  }
+  function hideStatus() { $("status").hidden = true; }
+
+  const ERRORS = {
+    not_granted: "Claude n'a pas été autorisé pour cette page. Rouvrez la page pour qu'il vous le redemande.",
+    sampling_disabled: "Claude n'est pas disponible pour ce compte.",
+    rate_limited: "Limite d'utilisation de votre compte Claude atteinte pour le moment. Réessayez un peu plus tard.",
+    session_expired: "Votre session Claude a expiré. Reconnectez-vous puis réessayez.",
+    image_rejected: "Une des photos n'a pas pu être lue (format ou taille). Retirez-la ou prenez-en une autre.",
+    images_unavailable: "Cette version de l'application ne permet pas d'envoyer des photos à Claude. Essayez depuis claude.ai dans un navigateur.",
+    refused: "Claude n'a pas pu traiter ces photos. Essayez avec d'autres photos.",
+    invalid_json: "La réponse de Claude était incomplète. Réessayez.",
+    empty_completion: "Claude n'a rien répondu. Réessayez avec moins de photos.",
+  };
+  function showError(e) {
+    const s = $("status");
+    s.className = "status error";
+    s.replaceChildren(el("span", {}, ERRORS[e?.code] || "La connexion à Claude a échoué. Réessayez dans un instant."));
+    s.hidden = false;
+  }
+
+  // ---------- result rendering ----------
+  function fragment(f) {
+    const text = str(f?.text);
+    const leg = str(f?.legibility).toLowerCase();
+    const parts = text.split(/(\?+)/).map((p) => (/^\?+$/.test(p) ? el("span", { class: "q" }, p) : p));
+    return el("span", { class: "frag", "data-l": leg, title: str(f?.location) || null }, ...parts, leg ? el("small", {}, leg) : null);
+  }
+
+  function renderClues(c) {
+    const facts = [];
+    const add = (k, v) => { if (str(v)) facts.push(el("dt", {}, k), el("dd", {}, str(v))); };
+    const v = c?.vintage || {};
+    add("Millésime lu", str(v.reading) ? `${str(v.reading)}${list(v.candidates).length ? " → " + list(v.candidates).join(", ") : ""}` : "");
+    add("Bouteille", [str(c?.bottle?.shape), str(c?.bottle?.glass_color)].filter(Boolean).join(", "));
+    add("Capsule", c?.bottle?.capsule);
+    add("Bouchon", c?.bottle?.cork);
+    add("Visuel", list(c?.visual_elements).join(" · "));
+    add("Mentions", list(c?.legal_mentions).join(" · "));
+    add("Origine probable", [str(c?.likely_region), str(c?.likely_country)].filter(Boolean).join(", "));
+    add("Dégâts", c?.damage_description);
+    const frags = Array.isArray(c?.text_fragments) ? c.text_fragments : [];
+    return el("div", { class: "clues" },
+      el("span", { class: "eyebrow" }, "Ce que Claude a pu lire"),
+      frags.length ? el("div", { class: "fragments" }, frags.map(fragment)) : el("p", { class: "hint" }, "Aucun texte lisible."),
+      facts.length ? el("dl", { class: "facts" }, facts) : null);
+  }
+
+  function searchUrl(q, images) {
+    return "https://www.google.com/search?q=" + encodeURIComponent(q) + (images ? "&tbm=isch" : "");
+  }
+
+  function renderCandidate(c, i, entry, isExample) {
+    const name = [str(c.producer), str(c.wine_name)].filter(Boolean).join(" – ") || "Vin inconnu";
+    const where = [str(c.appellation), str(c.region), str(c.country)].filter(Boolean).join(", ");
+    const pct = Math.max(0, Math.min(100, Math.round(Number(c.confidence) || 0)));
+    const q = str(c.search_query) || `${name} ${str(c.vintage)}`.trim();
+    const confirmed = entry && entry.confirmed === i;
+    const pro = list(c.supporting_evidence), con = list(c.contradicting_evidence);
+    return el("article", { class: "cand" + (i === 0 ? " top" : "") + (confirmed ? " confirmed" : "") },
+      el("div", { class: "cand-head" },
+        el("div", {},
+          el("span", { class: "rank" }, `Hypothèse ${i + 1}`),
+          el("h3", {}, name, str(c.vintage) ? ` ${str(c.vintage)}` : ""),
+          where || str(c.color) ? el("p", { class: "where" }, [where, str(c.color)].filter(Boolean).join(" · ")) : null),
+        el("span", { class: "pct" }, `${pct} %`)),
+      el("div", { class: "bar", role: "img", "aria-label": `Confiance ${pct} %` }, el("span", { style: `width:${pct}%` })),
+      pro.length || con.length ? el("ul", { class: "ev" },
+        pro.map((t) => el("li", { class: "pro" }, t)), con.map((t) => el("li", { class: "con" }, t))) : null,
+      el("div", { class: "row" },
+        el("a", { class: "btn small", href: searchUrl(q, true), target: "_blank", rel: "noopener" }, "Comparer les étiquettes"),
+        el("a", { class: "btn small", href: searchUrl(q, false), target: "_blank", rel: "noopener" }, "Rechercher"),
+        isExample ? null : el("button", { type: "button", class: "small", onclick: () => confirmCandidate(i) },
+          confirmed ? "✓ Confirmée" : "C'est celle-ci")));
+  }
+
+  function renderResult(entry, isExample) {
+    const ident = entry.ident || {};
+    const cands = (Array.isArray(ident.candidates) ? ident.candidates : []).filter((c) => c && typeof c === "object");
+    const questions = [...list(ident.follow_up_questions), ...list(entry.clues?.photo_advice)];
+    const nodes = [
+      el("div", {},
+        isExample ? el("span", { class: "example-tag" }, "Exemple de résultat") : null,
+        el("h2", {}, isExample ? "Voici à quoi ressemble une enquête" : "Résultat de l'enquête")),
+      renderClues(entry.clues),
+      cands.length ? el("div", { class: "cands" }, cands.map((c, i) => renderCandidate(c, i, entry, isExample)))
+                   : el("p", {}, "Claude n'a pas trouvé de candidat assez solide. Ajoutez des photos (bouchon, capsule) ou des informations."),
+      str(ident.summary) ? el("p", { class: "summary" }, str(ident.summary)) : null,
+    ];
+    if (!isExample && (questions.length || cands.length)) {
+      nodes.push(el("div", { class: "followup" },
+        el("h3", {}, "Pour affiner"),
+        questions.length ? el("ul", {}, questions.map((q) => el("li", {}, q))) : null,
+        el("label", { class: "hint", for: "answers" }, "Vos réponses ou nouvelles informations (vous pouvez aussi ajouter des photos plus haut) :"),
+        el("textarea", { id: "answers", placeholder: "Ex : le bouchon porte un blason et « 1985 »." }),
+        el("div", { class: "row" }, el("button", { type: "button", onclick: rerunWithAnswers }, "Relancer l'enquête"))));
+    }
+    $("result").replaceChildren(...nodes.filter(Boolean));
+  }
+
+  function rerunWithAnswers() {
+    const extra = $("answers")?.value.trim();
+    if (extra) {
+      const notes = $("notes");
+      notes.value = (notes.value.trim() ? notes.value.trim() + "\n" : "") + extra;
+    }
+    run($("notes").value.trim());
+  }
+
+  // ---------- history (stays on this device only) ----------
+  function readHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; }
+  }
+  function writeHistory(h) {
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 30))); } catch { /* storage unavailable */ }
+    renderHistory();
+  }
+  function saveHistory(entry) {
+    const h = readHistory();
+    h.unshift({ at: entry.at, clues: entry.clues, ident: entry.ident, notes: entry.notes, confirmed: null });
+    writeHistory(h);
+  }
+  function confirmCandidate(i) {
+    if (!state.last) return;
+    state.last.confirmed = state.last.confirmed === i ? null : i;
+    const h = readHistory();
+    const item = h.find((x) => x.at === state.last.at);
+    if (item) item.confirmed = state.last.confirmed;
+    writeHistory(h);
+    renderResult(state.last, false);
+  }
+  function renderHistory() {
+    const h = readHistory();
+    $("history").hidden = !h.length;
+    $("hist-list").replaceChildren(...h.map((x) => {
+      const cands = Array.isArray(x.ident?.candidates) ? x.ident.candidates : [];
+      const pick = cands[x.confirmed ?? 0];
+      const label = pick ? [str(pick.producer), str(pick.wine_name), str(pick.vintage)].filter(Boolean).join(" ") : "Sans résultat";
+      return el("li", {},
+        el("span", {}, x.confirmed != null ? el("span", { class: "ok" }, "✓ ") : "", label, x.confirmed == null && pick ? " (à confirmer)" : ""),
+        el("span", {}, new Date(x.at).toLocaleDateString("fr-FR")));
+    }));
+  }
+
+  // ---------- example shown before the first run ----------
+  const EXAMPLE = {
+    clues: {
+      text_fragments: [
+        { text: "CH?TEAU", legibility: "partiel", location: "haut" },
+        { text: "…YNCH-B?G…", legibility: "partiel", location: "centre" },
+        { text: "PAUILLAC", legibility: "clair", location: "bas" },
+        { text: "19?5", legibility: "partiel", location: "bas" },
+      ],
+      vintage: { reading: "19?5", candidates: ["1985", "1995"] },
+      visual_elements: ["gravure d'un château", "fond crème, lettres noires et dorées"],
+      bottle: { shape: "bordelaise", glass_color: "vert foncé", capsule: null, cork: null },
+      legal_mentions: [], likely_country: "France", likely_region: "Bordeaux",
+      damage_description: "Tache d'humidité sur la moitié gauche.", photo_advice: [],
+    },
+    ident: {
+      candidates: [
+        { producer: "Château Lynch-Bages", appellation: "Pauillac", region: "Bordeaux", country: "France", vintage: "1985", color: "rouge", confidence: 70,
+          supporting_evidence: ["« …YNCH-B?G… » correspond à Lynch-Bages", "Appellation Pauillac lisible"], contradicting_evidence: ["Millésime 1985 ou 1995 : le troisième chiffre est effacé"],
+          search_query: "Château Lynch-Bages 1985 étiquette" },
+        { producer: "Château Lynch-Moussas", appellation: "Pauillac", region: "Bordeaux", country: "France", vintage: "1995", color: "rouge", confidence: 15,
+          supporting_evidence: ["Pauillac, nom commençant par Lynch"], contradicting_evidence: ["Le fragment « B?G » ne colle pas avec Moussas"],
+          search_query: "Château Lynch-Moussas 1995 étiquette" },
+      ],
+      follow_up_questions: [],
+      summary: "Le fragment central et l'appellation désignent très probablement Lynch-Bages ; seul le millésime reste incertain.",
+    },
+  };
+
+  // ---------- start ----------
+  renderResult(EXAMPLE, true);
+  renderHistory();
+
+  (async () => {
+    const sample = window.claude?.use ? await window.claude.use("sample") : null;
+    const caps = sample ? await sample.limits().catch(() => null) : null;
+    if (!sample || !caps?.images) {
+      const box = $("unavailable");
+      box.replaceChildren(el("p", {}, sample
+        ? "Cette version de l'application Claude ne permet pas encore d'envoyer des photos depuis cette page. Ouvrez-la sur claude.ai dans le navigateur de votre téléphone."
+        : "Ouvrez cette page depuis claude.ai ou l'application Claude, connecté à votre compte : c'est votre compte Claude qui fait l'analyse."));
+      box.hidden = false;
+      return;
+    }
+    state.sample = sample;
+    state.maxPhotos = Math.max(1, caps.images.maxCount || MAX_PHOTOS_FALLBACK);
+    $("photo-hint").append(` Jusqu'à ${state.maxPhotos} photos.`);
+    updateRunButton();
+  })();
+})();
+</script>
