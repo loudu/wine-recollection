@@ -490,12 +490,33 @@ Réponds uniquement avec un objet JSON de cette forme :
     updateRunButton();
   }
 
+  // Tell a refused permission (which the viewer can lift) from an account that cannot use Claude here.
+  async function explainMissingSample() {
+    const framed = window.top !== window ? "cadre" : "page";
+    const perms = await window.claude.use("permissions").catch(() => null);
+    const st = perms ? await perms.state("sample").catch(() => "inconnu") : "sans-permissions";
+    if (st === "denied") {
+      markUnavailable("L'accès à Claude a été refusé pour cette page. Réactivez-le, puis rouvrez la page.", `sample-refusé-${framed}`);
+      $("unavailable").append(el("div", { class: "row" }, el("button", { type: "button", onclick: async () => {
+        try { await perms.manage(); }
+        catch { $("unavailable").append(el("p", { class: "hint" }, "Ouvrez le menu de la page (en haut), puis « Autorisations », et autorisez Claude.")); return; }
+        if (await perms.state("sample").catch(() => "") !== "denied") $("unavailable").append(el("p", { class: "hint" }, "C'est réactivé : fermez puis rouvrez la page."));
+      } }, "Réactiver l'accès à Claude")));
+      return;
+    }
+    markUnavailable("Votre compte Claude ne peut pas utiliser Claude depuis une page partagée par quelqu'un d'autre, ou votre application n'est pas à jour. Mettez l'application Claude à jour, ou essayez sur claude.ai dans un navigateur, connecté à votre compte.",
+      `sample-absent-${st}-${framed}`);
+  }
+
   updateRunButton();
   (async () => {
     const sample = window.claude?.use ? await window.claude.use("sample") : null;
     if (!sample) {
-      markUnavailable("Claude n'est pas joignable depuis cette page. Connectez-vous à votre compte sur claude.ai ou dans l'application Claude, puis rouvrez le lien.",
-        window.claude?.use ? "sample-absent" : "hors-claude");
+      if (!window.claude?.use) {
+        markUnavailable("Claude n'est pas joignable depuis cette page. Connectez-vous à votre compte sur claude.ai ou dans l'application Claude, puis rouvrez le lien.", "hors-claude");
+        return;
+      }
+      await explainMissingSample();
       return;
     }
     const caps = await sample.limits().catch(() => null);
