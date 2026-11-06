@@ -164,6 +164,7 @@ details.history summary { cursor: pointer; font-family: var(--font-display); fon
     <button type="button" class="primary" id="btn-run" disabled>Identifier la bouteille</button>
     <button type="button" id="btn-stop" hidden>Arrêter</button>
   </div>
+  <p class="hint" id="run-reason" role="status">Connexion à Claude…</p>
 
   <div id="status" class="status" hidden role="status" aria-live="polite"></div>
 
@@ -181,7 +182,7 @@ details.history summary { cursor: pointer; font-family: var(--font-display); fon
   const HISTORY_KEY = "wine-recollection-history";
   const MAX_PHOTOS_FALLBACK = 5;
 
-  const state = { photos: [], sample: null, maxPhotos: MAX_PHOTOS_FALLBACK, ctl: null, last: null };
+  const state = { photos: [], sample: null, maxPhotos: MAX_PHOTOS_FALLBACK, ctl: null, last: null, unavailable: "" };
 
   // ---------- small DOM helper (text only, never innerHTML for model output) ----------
   function el(tag, attrs = {}, ...children) {
@@ -224,6 +225,13 @@ details.history summary { cursor: pointer; font-family: var(--font-display); fon
   }
   function updateRunButton() {
     $("btn-run").disabled = !state.sample || !state.photos.length || !!state.ctl;
+    // Always say why the button is unavailable, so a blocked viewer is never left guessing.
+    let reason = "";
+    if (state.unavailable) reason = state.unavailable;
+    else if (!state.sample) reason = "Connexion à Claude…";
+    else if (!state.photos.length) reason = "Ajoutez au moins une photo pour lancer l'identification.";
+    $("run-reason").textContent = reason;
+    $("run-reason").hidden = !reason;
   }
 
   // ---------- prompts ----------
@@ -313,7 +321,8 @@ Réponds uniquement avec un objet JSON de cette forme :
   function showError(e) {
     const s = $("status");
     s.className = "status error";
-    s.replaceChildren(el("span", {}, ERRORS[e?.code] || "La connexion à Claude a échoué. Réessayez dans un instant."));
+    s.replaceChildren(el("span", {}, ERRORS[e?.code] || "La connexion à Claude a échoué. Réessayez dans un instant.",
+      el("br"), el("small", { class: "hint" }, `Code : ${e?.code || "inconnu"}`)));
     s.hidden = false;
   }
 
@@ -473,20 +482,34 @@ Réponds uniquement avec un objet JSON de cette forme :
   renderResult(EXAMPLE, true);
   renderHistory();
 
+  function markUnavailable(message, code) {
+    state.unavailable = `${message} (code : ${code})`;
+    const box = $("unavailable");
+    box.replaceChildren(el("p", {}, state.unavailable));
+    box.hidden = false;
+    updateRunButton();
+  }
+
+  updateRunButton();
   (async () => {
     const sample = window.claude?.use ? await window.claude.use("sample") : null;
-    const caps = sample ? await sample.limits().catch(() => null) : null;
-    if (!sample || !caps?.images) {
-      const box = $("unavailable");
-      box.replaceChildren(el("p", {}, sample
-        ? "Cette version de l'application Claude ne permet pas encore d'envoyer des photos depuis cette page. Ouvrez-la sur claude.ai dans le navigateur de votre téléphone."
-        : "Ouvrez cette page depuis claude.ai ou l'application Claude, connecté à votre compte : c'est votre compte Claude qui fait l'analyse."));
-      box.hidden = false;
+    if (!sample) {
+      markUnavailable("Claude n'est pas joignable depuis cette page. Connectez-vous à votre compte sur claude.ai ou dans l'application Claude, puis rouvrez le lien.",
+        window.claude?.use ? "sample-absent" : "hors-claude");
       return;
     }
+    const caps = await sample.limits().catch(() => null);
+    if (caps && !caps.images) {
+      markUnavailable("Votre accès Claude ne permet pas d'envoyer des photos depuis cette page. Essayez sur claude.ai dans le navigateur, connecté à votre compte.",
+        "images-absent");
+      return;
+    }
+    // When the limits cannot be read, let the viewer try anyway: a real call reports a precise error.
     state.sample = sample;
-    state.maxPhotos = Math.max(1, caps.images.maxCount || MAX_PHOTOS_FALLBACK);
-    $("photo-hint").append(` Jusqu'à ${state.maxPhotos} photos.`);
+    if (caps?.images?.maxCount) {
+      state.maxPhotos = Math.max(1, caps.images.maxCount);
+      $("photo-hint").append(` Jusqu'à ${state.maxPhotos} photos.`);
+    }
     updateRunButton();
   })();
 })();
