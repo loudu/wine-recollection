@@ -131,7 +131,10 @@ details.history summary { cursor: pointer; font-family: var(--font-display); fon
 .hist-list li { display: flex; justify-content: space-between; gap: 12px; font-size: .92rem; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
 .hist-list li span:last-child { color: var(--muted); white-space: nowrap; }
 .ok { color: var(--glass); font-weight: 600; }
-.unavailable { border: 1px solid var(--warn); border-radius: var(--radius); padding: 14px 16px; background: var(--surface); }
+.unavailable { border: 1px solid var(--warn); border-radius: var(--radius); padding: 14px 16px; background: var(--surface); display: grid; gap: 12px; }
+.fallback { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.fallback ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.fallback textarea { min-height: 140px; font: .85rem/1.45 var(--font-mono); }
 </style>
 
 <main>
@@ -227,7 +230,7 @@ details.history summary { cursor: pointer; font-family: var(--font-display); fon
     $("btn-run").disabled = !state.sample || !state.photos.length || !!state.ctl;
     // Always say why the button is unavailable, so a blocked viewer is never left guessing.
     let reason = "";
-    if (state.unavailable) reason = state.unavailable;
+    if (state.unavailable) reason = state.unavailableShort;
     else if (!state.sample) reason = "Connexion à Claude…";
     else if (!state.photos.length) reason = "Ajoutez au moins une photo pour lancer l'identification.";
     $("run-reason").textContent = reason;
@@ -482,10 +485,38 @@ Réponds uniquement avec un objet JSON de cette forme :
   renderResult(EXAMPLE, true);
   renderHistory();
 
+  // Works with any Claude account: the same two-step method, pasted into an ordinary conversation.
+  const CHAT_PROMPT = `Je vais te joindre des photos d'une bouteille de vin dont l'étiquette est abîmée. Aide-moi à l'identifier en deux temps.
+
+1. OBSERVATION. Recopie chaque fragment de texte exactement comme il apparaît, en remplaçant chaque lettre illisible par « ? », sans jamais compléter un mot d'après ce que tu crois être le vin. Décris les éléments visuels (blason, illustration, typographie, couleurs), la forme et la couleur de la bouteille, la capsule et le bouchon s'ils sont visibles, et les mentions légales lisibles.
+
+2. ENQUÊTE. À partir de ces indices seulement, propose 1 à 5 vins possibles, du plus probable au moins probable. Pour chacun : producteur, cuvée, appellation, millésime, une confiance honnête en pourcentage (aucun au-dessus de 50 % si les indices sont maigres), les indices qui concordent et ceux qui contredisent. Ne cite que des vins dont tu es raisonnablement sûr qu'ils existent. Si tu peux chercher sur le web, vérifie chaque candidat et donne tes sources.
+
+Termine par les questions ou photos supplémentaires (bouchon, capsule, contre-étiquette…) qui départageraient le mieux les candidats.`;
+
+  function fallbackBlock() {
+    const area = el("textarea", { id: "chat-prompt", readonly: true, "aria-label": "Instructions à copier" });
+    area.value = CHAT_PROMPT;
+    const note = el("p", { class: "hint", role: "status" });
+    return el("div", { class: "fallback" },
+      el("h3", {}, "Solution : utiliser une conversation Claude"),
+      el("ol", {},
+        el("li", {}, "Copiez les instructions ci-dessous."),
+        el("li", {}, "Ouvrez une nouvelle conversation dans l'application Claude."),
+        el("li", {}, "Joignez vos photos (trombone ou appareil photo), collez les instructions et envoyez.")),
+      area,
+      el("div", { class: "row" }, el("button", { type: "button", onclick: async () => {
+        try { await navigator.clipboard.writeText(CHAT_PROMPT); note.textContent = "Copié."; }
+        catch { area.focus(); area.select(); note.textContent = "Texte sélectionné : utilisez « Copier » de votre téléphone."; }
+      } }, "Copier les instructions")),
+      note);
+  }
+
   function markUnavailable(message, code) {
     state.unavailable = `${message} (code : ${code})`;
+    state.unavailableShort = "Identification automatique indisponible : voir la solution en haut de la page.";
     const box = $("unavailable");
-    box.replaceChildren(el("p", {}, state.unavailable));
+    box.replaceChildren(el("p", {}, state.unavailable), fallbackBlock());
     box.hidden = false;
     updateRunButton();
   }
@@ -504,7 +535,7 @@ Réponds uniquement avec un objet JSON de cette forme :
       } }, "Réactiver l'accès à Claude")));
       return;
     }
-    markUnavailable("Votre compte Claude ne peut pas utiliser Claude depuis une page partagée par quelqu'un d'autre, ou votre application n'est pas à jour. Mettez l'application Claude à jour, ou essayez sur claude.ai dans un navigateur, connecté à votre compte.",
+    markUnavailable("L'analyse automatique n'est pas disponible sur cette page pour votre compte Claude (cela arrive sur une page partagée par quelqu'un d'autre). Vous pouvez faire la même enquête dans une conversation Claude, comme expliqué ci-dessous.",
       `sample-absent-${st}-${framed}`);
   }
 
